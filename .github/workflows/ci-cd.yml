@@ -39,13 +39,10 @@ jobs:
   continuous-deployment:
     name: Deploy to EC2
     runs-on: ubuntu-latest
-    needs: [continuous-integration]
     steps:
-      # Step 1: Checkout Codee
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Set up PHP (optional if deployment requires PHP setup)
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -53,8 +50,6 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
           coverage: none
 
-      # Step 3: Transfer Code to EC2
-         # Step 3: Transfer Code to EC2
       - name: Deploy to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
@@ -62,9 +57,9 @@ jobs:
           USER: ${{ secrets.EC2_USER }}
         run: |
           echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
-          rsync -avz --exclude=".git" --exclude="node_modules" -e "ssh -o StrictHostKeyChecking=no" ./ ${USER}@${HOST}:/var/www/html/laravel
+          ssh-keyscan -H ${HOST} >> ~/.ssh/known_hosts
+          rsync -avz --exclude=".git" --exclude="node_modules" -e "ssh" ./ ${USER}@${HOST}:/var/www/html/laravel
 
-      # Step 4: Finalize Deployment on EC22
       - name: Finalize Deployment
         env:
           PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
@@ -82,4 +77,4 @@ jobs:
           sudo systemctl restart php8.2-fpm
           sudo systemctl restart nginx
           '
-    
+      
