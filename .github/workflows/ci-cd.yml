@@ -22,17 +22,17 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
           coverage: none
 
-      # 3. Set up Laravel Environment
-      - name: Set up .env File
-        run: |
-          cp .env.ci .env
-          php artisan key:generate
-
-      # 4. Install dependencies
-      - name: Install Dependencies
+      # 3. Install Composer Dependencies
+      - name: Install Composer Dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-      # 5. Run tests
+      # 4. Set up .env File
+      - name: Set up .env File
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # 5. Run Tests
       - name: Run PHPUnit Tests
         run: php artisan test
 
