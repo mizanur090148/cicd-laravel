@@ -1,0 +1,99 @@
+name: CI/CD Pipeline for Laravel Project
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  continuous-deployment:
+    name: Deploy Laravel App to EC2
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Upload Code to EC2
+      - name: Deploy Laravel Project to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          # Save the private key to a file
+          echo "$PRIVATE_KEY" > github-ec2.pem
+          chmod 600 github-ec2.pem  # Set correct permissions for the private key
+
+          # Transfer project files to the server
+          scp -o StrictHostKeyChecking=no -i github-ec2.pem -r . ${USER}@${HOST}:/tmp/laravel-deployment
+
+      # Step 3: Deploy on EC2
+      - name: Finalize Deployment on EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
+          ssh -o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST} '
+          echo "Starting deployment process for Laravel project..."
+
+          # Define deployment variables
+          DEPLOY_DIR="/var/www/html/laravel-app"
+          TEMP_DIR="/tmp/laravel-deployment"
+
+          # Ensure deployment directory exists
+          if [ ! -d "$DEPLOY_DIR" ]; then
+            echo "$DEPLOY_DIR does not exist. Creating directory..."
+            sudo mkdir -p "$DEPLOY_DIR"
+          fi
+
+          # Clear the existing deployment folder
+          echo "Clearing old files..."
+          sudo rm -rf $DEPLOY_DIR/*
+
+          # Move the new project files
+          echo "Deploying Laravel files to $DEPLOY_DIR..."
+          sudo mv $TEMP_DIR/* $DEPLOY_DIR/
+
+          # Set proper permissions
+          echo "Setting permissions for Laravel..."
+          sudo chown -R www-data:www-data $DEPLOY_DIR
+          sudo chmod -R 775 $DEPLOY_DIR/storage $DEPLOY_DIR/bootstrap/cache
+
+          # Ensure dependencies are installed
+          echo "Installing dependencies with Composer..."
+          cd $DEPLOY_DIR
+          composer install --no-dev --optimize-autoloader
+
+          # Set up the environment
+          echo "Setting up environment..."
+          cp .env.example .env
+          php artisan config:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+          # Run migrations
+          echo "Running migrations..."
+          php artisan migrate --force
+
+          # Restart services
+          echo "Restarting services..."
+          sudo systemctl restart php8.1-fpm
+          sudo systemctl restart nginx
+
+          echo "Laravel deployment completed successfully!"
+          '
+
+      # Step 4: Post-Deployment Health Check
+      - name: Post-Deployment Health Check
+        run: |
+          RESPONSE=$(curl -o /dev/null -s -w "%{http_code}" http://${{ secrets.EC2_HOST }})
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Health check failed with response code $RESPONSE."
+            exit 1
+          else
+            echo "Health check passed!"
+          fi
