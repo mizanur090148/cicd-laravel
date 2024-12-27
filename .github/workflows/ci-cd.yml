@@ -63,7 +63,7 @@ jobs:
           echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
           scp -o StrictHostKeyChecking=no -i github-ec2.pem -r ./ ${USER}@${HOST}:/var/www/html/laravel
 
-      # Step 4: Finalize Deployment on EC2
+      # Step 4: Finalize Deployment on EC22
       - name: Finalize Deployment
         env:
           PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
