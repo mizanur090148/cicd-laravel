@@ -25,7 +25,7 @@ jobs:
       # 3. Set up Laravel Environment
       - name: Set up .env File
         run: |
-          cp .env.example .env
+          cp .env.ci .env
           php artisan key:generate
 
       # 4. Install dependencies
