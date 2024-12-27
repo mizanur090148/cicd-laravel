@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [continuous-integration]
     steps:
-      # Step 1: Checkout Code
+      # Step 1: Checkout Codee
       - name: Checkout Code
         uses: actions/checkout@v3
 
