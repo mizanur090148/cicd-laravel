@@ -38,6 +38,7 @@ jobs:
 
   continuous-deployment:
     name: Deploy to EC2
+    needs: [continuous-integration]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
