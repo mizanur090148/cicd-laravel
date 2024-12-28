@@ -58,8 +58,7 @@ jobs:
           USER: ${{ secrets.EC2_USER }}
         run: |
           echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
-          ssh-keyscan -H ${HOST} >> ~/.ssh/known_hosts
-          rsync -avz --exclude=".git" --exclude="node_modules" -e "ssh" ./ ${USER}@${HOST}:/var/www/html/laravel
+          scp -o StrictHostKeyChecking=no -i github-ec2.pem -r ./ ${USER}@${HOST}:/var/www/html/laravel
 
       - name: Finalize Deployment
         env:
