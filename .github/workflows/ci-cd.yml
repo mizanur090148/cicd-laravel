@@ -36,48 +36,42 @@ jobs:
       - name: Run PHPUnit Tests
         run: php artisan test
 
-  # continuous-deployment:
-  #   name: Deploy to EC2
-  #   needs: [continuous-integration]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     # 1. Checkout Code
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v3
+  continuous-deployment:
+    name: Deploy to EC2
+    needs: continuous-integration
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-  #     # 2. Set up PHP (Optional if EC2 uses PHP)
-  #     - name: Set up PHP
-  #       uses: shivammathur/setup-php@v2
-  #       with:
-  #         php-version: '8.2'
-  #         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
-  #         coverage: none
+      # 2. Deploy to EC2
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > ec2-key.pem
+          chmod 600 ec2-key.pem
+          scp -o StrictHostKeyChecking=no -i ec2-key.pem -r ./* ${USER}@${HOST}:/var/www/html/laravel
 
-  #     # 3. Deploy to EC2
-  #     - name: Deploy to EC2
-  #       env:
-  #         PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-  #         HOST: ${{ secrets.EC2_HOST }}
-  #         USER: ${{ secrets.EC2_USER }}
-  #       run: |
-  #         echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
-  #         scp -o StrictHostKeyChecking=no -i github-ec2.pem -r ./* ${USER}@${HOST}:/var/www/html/laravel
-
-  #     # 4. Finalize Deployment
-  #     - name: Finalize Deployment
-  #       env:
-  #         PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-  #         HOST: ${{ secrets.EC2_HOST }}
-  #         USER: ${{ secrets.EC2_USER }}
-  #       run: |
-  #         echo "$PRIVATE_KEY" > github-ec2.pem && chmod 600 github-ec2.pem
-  #         ssh -o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST} bash -c "
-  #         cd /var/www/html/laravel || exit
-  #         composer install --no-progress --prefer-dist --optimize-autoloader
-  #         php artisan migrate --force
-  #         php artisan config:cache
-  #         php artisan route:cache
-  #         php artisan view:cache
-  #         sudo systemctl restart php8.2-fpm
-  #         sudo systemctl restart nginx
-  #         "
+      # 3. Finalize Deployment
+      - name: Finalize Deployment
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > ec2-key.pem
+          chmod 600 ec2-key.pem
+          ssh -o StrictHostKeyChecking=no -i ec2-key.pem ${USER}@${HOST} << EOF
+            cd /var/www/html/laravel
+            composer install --no-progress --prefer-dist --optimize-autoloader
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            sudo systemctl restart php8.2-fpm
+            sudo systemctl restart nginx
+          EOF
