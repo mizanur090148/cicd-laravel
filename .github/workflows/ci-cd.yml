@@ -50,7 +50,7 @@ jobs:
 
             # Run database migrations if needed
             # Uncomment the next line to run migrations
-            #sudo php artisan migrate --force
+            sudo php artisan migrate --force
 
             # Clear and cache config
             sudo php artisan config:cache
