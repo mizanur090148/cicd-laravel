@@ -10,24 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      EC2_HOST: 44.223.17.83 # Set your EC2 hostname or IP address
-      EC2_USER: ubuntu
+      EC2_HOST: 44.223.17.83 # Your EC2 instance IP
+      EC2_USER: ubuntu # Default user for EC2 Ubuntu instances
       EC2_KEY: ${{ secrets.EC2_KEY }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Debug Variables
-        run: |
-          echo "EC2_HOST is: $EC2_HOST"
-
       - name: Add EC2 Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
-          if [ -n "$EC2_HOST" ]; then
-            ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
-          else
-            echo "Error: EC2_HOST is not set."
-            exit 1
-          fi
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Create SSH Key
+        run: |
+          echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
+          chmod 600 /tmp/deploy_key.pem
+
+      - name: Deploy Application
+        run: |
+          ssh -i /tmp/deploy_key.pem "$EC2_USER@$EC2_HOST" << 'EOF'
+          cd /var/www/laravel
+          git pull origin main
+          composer install --no-dev --optimize-autoloader
+          php artisan migrate --force
+          php artisan cache:clear
+          php artisan config:clear
+          php artisan route:clear
+          EOF
