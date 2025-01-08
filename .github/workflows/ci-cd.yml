@@ -1,4 +1,4 @@
-name: Deploy Laravel to EC2
+name: Deploy to EC2
 
 on:
   push:
@@ -7,44 +7,53 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to EC2
+    name: Deploy Laravel to EC2
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Deploy Laravel to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_KEY: ${{ secrets.EC2_KEY }}
+      # Step 2: Decode and set up SSH key
+      - name: Set up SSH Key
         run: |
-          echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
+          echo "$EC2_KEY" > /tmp/deploy_key.pem
           chmod 600 /tmp/deploy_key.pem
 
-          # SSH into EC2 and execute deployment commands
-          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
-            cd /var/www/html/laravel
+      # Step 3: Add the server to known hosts
+      - name: Add EC2 Host to Known Hosts
+        run: |
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+      # Step 4: Deploy code to EC2
+      - name: Deploy Code to EC2
+        env:
+          EC2_USER: ubuntu # Change this if your EC2 user is different (e.g., ec2-user)
+          EC2_HOST: your-ec2-instance-public-ip-or-dns # Replace with your EC2 instance's public IP or DNS
+        run: |
+          ssh -i /tmp/deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd /var/www/laravel
 
             # Pull the latest changes from GitHub
             git pull origin main
 
-            # Install dependencies
+            # Set correct permissions
+            sudo chown -R www-data:www-data /var/www/laravel
+            sudo chmod -R 775 /var/www/laravel/storage /var/www/laravel/bootstrap/cache
+
+            # Install PHP dependencies
             composer install --no-dev --optimize-autoloader
+
+            # Run database migrations
+            php artisan migrate --force
 
             # Clear and cache configurations
             php artisan config:clear
             php artisan config:cache
             php artisan route:cache
+            php artisan view:cache
 
-            # Run migrations
-            php artisan migrate --force
-
-            # Set correct permissions
-            chmod -R 775 storage
-            chmod -R 775 bootstrap/cache
+            # Restart PHP
+            sudo service php8.2-fpm restart # Change the PHP version if needed
           EOF
-
-          # Cleanup
-          rm -f /tmp/deploy_key.pem
