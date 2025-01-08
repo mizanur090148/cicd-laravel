@@ -12,7 +12,7 @@ jobs:
     env:
       EC2_HOST: 44.223.17.83 # Your EC2 instance IP
       EC2_USER: ubuntu # Default user for EC2 Ubuntu instances
-      EC2_KEY: ${{ secrets.EC2_KEY }}
+      EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
 
     steps:
       - name: Checkout Code
