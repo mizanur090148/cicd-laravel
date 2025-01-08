@@ -24,6 +24,7 @@ jobs:
       # Step 3: Add the server to known hosts
       - name: Add EC2 Host to Known Hosts
         run: |
+          mkdir -p ~/.ssh
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
       # Step 4: Deploy code to EC2
