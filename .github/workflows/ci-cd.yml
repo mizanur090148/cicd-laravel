@@ -21,14 +21,17 @@ jobs:
           chmod 600 /tmp/test-cicd.pem
 
       # Step 3: Add EC2 Host to Known Hosts to avoid SSH warnings
-      - name: Add EC2 Host to Known Hosts
+      - name: Debug EC2_HOST and Add to Known Hosts
         run: |
+          echo "EC2_HOST is: $EC2_HOST"
           mkdir -p ~/.ssh
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
       # Step 4: SSH to EC2 and run deployment commands
       - name: SSH to EC2 and Deploy
         run: |
+          echo "EC2_USER is: $EC2_USER"
+          echo "EC2_HOST is: $EC2_HOST"
           ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
             # Navigate to your Laravel project directory
             cd /var/www/laravel
