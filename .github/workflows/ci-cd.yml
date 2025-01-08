@@ -15,6 +15,7 @@ jobs:
       EC2_KEY: ${{ secrets.EC2_KEY }}
 
     steps:
+      # Step 1: Checkout the code from GitHub repository
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -23,6 +24,7 @@ jobs:
         run: |
           echo "$EC2_KEY" | base64 --decode > /tmp/test-cicd.pem
           chmod 600 /tmp/test-cicd.pem
+          ls -l /tmp/test-cicd.pem  # Debugging step: List the permissions
 
       # Step 3: Add EC2 Host to Known Hosts to avoid SSH warnings
       - name: Debug EC2_HOST and Add to Known Hosts
@@ -36,6 +38,9 @@ jobs:
         run: |
           echo "EC2_USER is: $EC2_USER"
           echo "EC2_HOST is: $EC2_HOST"
+          # Debugging: Check that the SSH key exists
+          ls -l /tmp/test-cicd.pem
+          # Attempt SSH connection with verbose output for more information
           ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
             # Navigate to your Laravel project directory
             cd /var/www/laravel
