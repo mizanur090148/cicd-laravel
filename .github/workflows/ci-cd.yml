@@ -42,16 +42,23 @@ jobs:
             git pull origin main
 
             # Install Composer dependencies (production only)
-            sudo composer install
+            sudo composer install --no-dev --optimize-autoloader
 
-            # Run database migrations
-            #php artisan migrate --force
+            # Run database migrations if needed
+            # Uncomment the next line to run migrations
+            #sudo php artisan migrate --force
 
             # Clear and cache config
-            #php artisan config:cache
+            sudo php artisan config:cache
 
             # Clear and cache routes
-            #php artisan route:cache
+            sudo php artisan route:cache
+
+            # Clear and cache views
+            sudo php artisan view:cache
+
+            # Restart the Nginx service to reflect the changes
+            sudo systemctl restart nginx
 
             # Exit SSH session
             exit
