@@ -8,34 +8,31 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
-    env:
-      EC2_HOST: 44.223.17.83 # Your EC2 instance IP
-      EC2_USER: ubuntu # Default user for EC2 Ubuntu instances
-      EC2_KEY: ${{ secrets.EC2_KEY }}
-
     steps:
-      - name: Checkout Code
+      - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Add EC2 Host to Known Hosts
+      - name: Decode and Save SSH Key
+        run: |
+          echo "$EC2_KEY" | base64 --decode > /tmp/test-cicd.pem
+          chmod 600 /tmp/test-cicd.pem
+
+      - name: Add Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
-      - name: Create SSH Key
+      - name: Deploy to EC2
         run: |
-          echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
-          chmod 600 /tmp/deploy_key.pem
-
-      - name: Deploy Application
-        run: |
-          ssh -i /tmp/deploy_key.pem "$EC2_USER@$EC2_HOST" << 'EOF'
+          ssh -i /tmp/test-cicd.pem $EC2_USER@$EC2_HOST << 'EOF'
           cd /var/www/laravel
           git pull origin main
           composer install --no-dev --optimize-autoloader
           php artisan migrate --force
-          php artisan cache:clear
-          php artisan config:clear
-          php artisan route:clear
+          php artisan config:cache
+          php artisan route:cache
+          exit
           EOF
+        env:
+          EC2_USER: ubuntu # Replace with your EC2 username
+          EC2_HOST: 44.223.17.83 # Replace with your EC2 public IP
