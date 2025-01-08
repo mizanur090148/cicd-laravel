@@ -10,27 +10,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code from GitHub repository
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Step 2: Decode and save SSH private key from GitHub Secrets
       - name: Decode and Save SSH Key
         run: |
           echo "$EC2_KEY" | base64 --decode > /tmp/test-cicd.pem
           chmod 600 /tmp/test-cicd.pem
 
+      # Step 3: Add EC2 Host to Known Hosts to avoid SSH warnings
       - name: Add EC2 Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
-      - name: SSH to EC2 and Pull Latest Code
+      # Step 4: SSH to EC2 and run deployment commands
+      - name: SSH to EC2 and Deploy
         run: |
           ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
+            # Navigate to your Laravel project directory
             cd /var/www/laravel
+
+            # Pull the latest code from GitHub
             git pull origin main
+
+            # Install Composer dependencies (production only)
             composer install --no-dev --optimize-autoloader
+
+            # Run database migrations
             php artisan migrate --force
+
+            # Clear and cache config
             php artisan config:cache
+
+            # Clear and cache routes
             php artisan route:cache
+
+            # Exit SSH session
             exit
           EOF
