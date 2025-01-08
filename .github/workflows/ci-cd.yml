@@ -12,7 +12,7 @@ jobs:
     env:
       EC2_HOST: 44.223.17.83 # Replace with your EC2 instance IP
       EC2_USER: ubuntu # EC2 user for Ubuntu instances
-      EC2_KEY: ${{ secrets.EC2_KEY }} # GitHub Secret for your private key of .pem file
+      EC2_KEY: ${{ secrets.EC2_KEY }} # GitHub Secret for your private key
 
     steps:
       # Step 1: Checkout code from GitHub repository
