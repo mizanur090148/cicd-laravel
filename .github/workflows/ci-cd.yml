@@ -33,7 +33,7 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
-      # Step 4: SSH to EC2 and run deployment commands
+      # Step 4: SSH to EC2 and run deployment
       - name: SSH to EC2 and Deploy
         run: |
           echo "EC2_USER is: $EC2_USER"
