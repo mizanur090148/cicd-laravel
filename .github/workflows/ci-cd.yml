@@ -9,6 +9,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      EC2_HOST: 44.223.17.83 # Your EC2 instance IP
+      EC2_USER: ubuntu # Default user for EC2 Ubuntu instances
+      EC2_KEY: ${{ secrets.EC2_KEY }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
