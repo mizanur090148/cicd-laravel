@@ -43,7 +43,7 @@ jobs:
             cd /var/www/laravel
 
             # Pull the latest code from GitHub
-            git pull origin main
+            sudo git pull origin main --no-ff
 
             # Install Composer dependencies (production only)
             sudo composer install --no-dev --optimize-autoloader --no-plugins
