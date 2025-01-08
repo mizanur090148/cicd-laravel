@@ -40,8 +40,8 @@ jobs:
     needs: [ci] # Ensures CI job passes before deployment
 
     env:
-      EC2_HOST: 44.223.17.83 # Replace with your EC2 instance IP
-      EC2_USER: ubuntu # EC2 user for Ubuntu instances
+      EC2_HOST: ${{ secrets.EC2_HOST }} # Replace with your EC2 instance IP
+      EC2_USER: ${{ secrets.EC2_USER }} # EC2 user for Ubuntu instances
       EC2_KEY: ${{ secrets.EC2_KEY }} # GitHub Secret for your private key
 
     steps:
