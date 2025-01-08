@@ -20,7 +20,9 @@ jobs:
       - name: Add Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          echo "$EC2_HOST" | ssh-keyscan -H >> ~/.ssh/known_hosts
+        env:
+          EC2_HOST: 44.223.17.83 # Replace with your EC2 public IP
 
       - name: Deploy to EC2
         run: |
