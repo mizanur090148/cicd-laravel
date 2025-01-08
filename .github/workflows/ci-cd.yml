@@ -8,34 +8,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Decode and Save SSH Key
         run: |
           echo "$EC2_KEY" | base64 --decode > /tmp/test-cicd.pem
           chmod 600 /tmp/test-cicd.pem
 
-      - name: Create SSH Directory and Add Host to Known Hosts
+      - name: Add EC2 Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
-          # Ensure the EC2_HOST variable is properly set in the environment or hardcode the IP address
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
-        env:
-          EC2_HOST: 44.223.17.83 # Replace with your EC2 public IP
 
-      - name: Deploy to EC2
+      - name: SSH to EC2 and Pull Latest Code
         run: |
-          ssh -i /tmp/test-cicd.pem -t $EC2_USER@$EC2_HOST << 'EOF'
-          cd /var/www/laravel
-          git pull origin main
-          composer install --no-dev --optimize-autoloader
-          php artisan migrate --force
-          php artisan config:cache
-          php artisan route:cache
-          exit
+          ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
+            cd /var/www/laravel
+            git pull origin main
+            composer install --no-dev --optimize-autoloader
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            exit
           EOF
-        env:
-          EC2_USER: ubuntu # Replace with your EC2 username
-          EC2_HOST: 44.223.17.83 # Replace with your EC2 public IP
