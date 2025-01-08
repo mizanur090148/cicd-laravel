@@ -17,10 +17,11 @@ jobs:
           echo "$EC2_KEY" | base64 --decode > /tmp/test-cicd.pem
           chmod 600 /tmp/test-cicd.pem
 
-      - name: Add Host to Known Hosts
+      - name: Create SSH Directory and Add Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
-          echo "$EC2_HOST" | ssh-keyscan -H >> ~/.ssh/known_hosts
+          # Ensure the EC2_HOST variable is properly set in the environment or hardcode the IP address
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
         env:
           EC2_HOST: 44.223.17.83 # Replace with your EC2 public IP
 
