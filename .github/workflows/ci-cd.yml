@@ -1,77 +1,50 @@
-name: CI/CD Pipeline for Laravel
+name: Deploy Laravel to EC2
 
 on:
   push:
     branches:
-      - main
+      - main # Trigger only on the main branch
 
 jobs:
-  continuous-integration:
-    name: Build & Test Laravel
-    runs-on: ubuntu-22.04
-    steps:
-      # 1. Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      # 2. Set up PHP
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
-          coverage: none
-
-      # 3. Install Composer Dependencies
-      - name: Install Composer Dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-      # 4. Set up .env File
-      - name: Set up .env File
-        run: |
-          cp .env.ci .env
-          php artisan key:generate
-
-      # 5. Run Tests
-      - name: Run PHPUnit Tests
-        run: php artisan test
-
-  continuous-deployment:
+  deploy:
     name: Deploy to EC2
-    needs: continuous-integration
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      # 2. Deploy to EC2
-      - name: Deploy to EC2
-        env:
-          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ${{ secrets.EC2_USER }}
-        run: |
-          echo "$PRIVATE_KEY" > ec2-key.pem
-          chmod 600 ec2-key.pem
-          scp -o StrictHostKeyChecking=no -i ec2-key.pem -r ./* ${USER}@${HOST}:/var/www/html/laravel
+    - name: Deploy Laravel to EC2
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        EC2_USER: ${{ secrets.EC2_USER }}
+        EC2_KEY: ${{ secrets.EC2_KEY }}
+      run: |
+        echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
+        chmod 600 /tmp/deploy_key.pem
 
-      # 3. Finalize Deployment
-      - name: Finalize Deployment
-        env:
-          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ${{ secrets.EC2_USER }}
-        run: |
-          echo "$PRIVATE_KEY" > ec2-key.pem
-          chmod 600 ec2-key.pem
-          ssh -o StrictHostKeyChecking=no -i ec2-key.pem ${USER}@${HOST} << EOF
-            cd /var/www/html/laravel
-            composer install --no-progress --prefer-dist --optimize-autoloader
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            sudo systemctl restart php8.2-fpm
-            sudo systemctl restart nginx
-          EOF
+        # SSH into EC2 and execute deployment commands
+        ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+          cd /var/www/html/laravel
+
+          # Pull the latest changes from GitHub
+          git pull origin main
+
+          # Install dependencies
+          composer install --no-dev --optimize-autoloader
+
+          # Clear and cache configurations
+          php artisan config:clear
+          php artisan config:cache
+          php artisan route:cache
+
+          # Run migrations
+          php artisan migrate --force
+
+          # Set correct permissions
+          chmod -R 775 storage
+          chmod -R 775 bootstrap/cache
+        EOF
+
+        # Cleanup
+        rm -f /tmp/deploy_key.pem
