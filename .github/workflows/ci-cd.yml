@@ -3,7 +3,7 @@ name: Deploy Laravel to EC2
 on:
   push:
     branches:
-      - main # Trigger only on the main branch
+      - main
 
 jobs:
   deploy:
@@ -11,40 +11,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Deploy Laravel to EC2
-      env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USER: ${{ secrets.EC2_USER }}
-        EC2_KEY: ${{ secrets.EC2_KEY }}
-      run: |
-        echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
-        chmod 600 /tmp/deploy_key.pem
+      - name: Deploy Laravel to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_KEY }}
+        run: |
+          echo "$EC2_KEY" | base64 --decode > /tmp/deploy_key.pem
+          chmod 600 /tmp/deploy_key.pem
 
-        # SSH into EC2 and execute deployment commands
-        ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
-          cd /var/www/html/laravel
+          # SSH into EC2 and execute deployment commands
+          ssh -o StrictHostKeyChecking=no -i /tmp/deploy_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+            cd /var/www/html/laravel
 
-          # Pull the latest changes from GitHub
-          git pull origin main
+            # Pull the latest changes from GitHub
+            git pull origin main
 
-          # Install dependencies
-          composer install --no-dev --optimize-autoloader
+            # Install dependencies
+            composer install --no-dev --optimize-autoloader
 
-          # Clear and cache configurations
-          php artisan config:clear
-          php artisan config:cache
-          php artisan route:cache
+            # Clear and cache configurations
+            php artisan config:clear
+            php artisan config:cache
+            php artisan route:cache
 
-          # Run migrations
-          php artisan migrate --force
+            # Run migrations
+            php artisan migrate --force
 
-          # Set correct permissions
-          chmod -R 775 storage
-          chmod -R 775 bootstrap/cache
-        EOF
+            # Set correct permissions
+            chmod -R 775 storage
+            chmod -R 775 bootstrap/cache
+          EOF
 
-        # Cleanup
-        rm -f /tmp/deploy_key.pem
+          # Cleanup
+          rm -f /tmp/deploy_key.pem
