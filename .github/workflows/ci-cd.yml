@@ -19,7 +19,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3' # Set the PHP version required by your project
+          php-version: '8.3' # Adjust this version as needed
           extensions: mbstring, bcmath, pdo, mysql
           coverage: none
 
@@ -27,9 +27,9 @@ jobs:
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader
 
-      # Step 4: Run Laravel tests
+      # Step 4: Run PHPUnit tests
       - name: Run Tests
-        run: php artisan test --env=testing
+        run: ./vendor/bin/phpunit --configuration phpunit.xml
 
   # Continuous Deployment Job
   deploy:
