@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      EC2_HOST: your-ec2-hostname-or-ip # Set your EC2 hostname or IP address
+      EC2_HOST: 44.223.17.83 # Set your EC2 hostname or IP address
       EC2_USER: ubuntu
       EC2_KEY: ${{ secrets.EC2_KEY }}
 
