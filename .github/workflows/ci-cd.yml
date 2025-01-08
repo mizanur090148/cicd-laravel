@@ -35,6 +35,10 @@ jobs:
       - name: SSH to EC2 and Deploy
         run: |
           ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
+            # Fix permissions for the project files
+            sudo chown -R www-data:www-data /var/www/laravel
+            sudo chmod -R 755 /var/www/laravel
+
             # Navigate to your Laravel project directory
             cd /var/www/laravel
 
@@ -42,7 +46,7 @@ jobs:
             git pull origin main
 
             # Install Composer dependencies (production only)
-            sudo composer install --no-dev --optimize-autoloader
+            sudo composer install --no-dev --optimize-autoloader --no-plugins
 
             # Run database migrations if needed
             # Uncomment the next line to run migrations
