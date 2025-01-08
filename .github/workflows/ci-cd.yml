@@ -40,8 +40,8 @@ jobs:
           echo "EC2_HOST is: $EC2_HOST"
           # Debugging: Check that the SSH key exists
           ls -l /tmp/test-cicd.pem
-          # Attempt SSH connection with verbose output for more information
-          ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
+          # Force pseudo-terminal allocation
+          ssh -v -i /tmp/test-cicd.pem -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
             # Navigate to your Laravel project directory
             cd /var/www/laravel
 
