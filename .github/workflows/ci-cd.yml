@@ -1,4 +1,4 @@
-name: Deploy to EC2 Instance
+name: CI/CD Pipeline for Laravel Deployment
 
 on:
   push:
@@ -6,8 +6,35 @@ on:
       - main
 
 jobs:
+  # Continuous Integration Job
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code from GitHub repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Setup PHP environment
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1' # Set the PHP version required by your project
+          extensions: mbstring, bcmath, pdo, mysql
+          coverage: none
+
+      # Step 3: Install Composer dependencies
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      # Step 4: Run Laravel tests
+      - name: Run Tests
+        run: php artisan test --env=testing
+
+  # Continuous Deployment Job
   deploy:
     runs-on: ubuntu-latest
+    needs: [ci] # Ensures CI job passes before deployment
 
     env:
       EC2_HOST: 44.223.17.83 # Replace with your EC2 instance IP
