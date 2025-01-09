@@ -19,7 +19,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3' # Adjust this as needed
+          php-version: "8.3" # Adjust this as needed
           extensions: mbstring, bcmath, pdo, mysql
 
       # Step 3: Install Composer dependencies
@@ -81,6 +81,9 @@ jobs:
             # Run database migrations if needed
             # Uncomment the next line to run migrations
             sudo php artisan migrate --force
+
+            # Uncomment the next line to run migrations
+            sudo php artisan db:seed
 
             # Clear and cache config
             sudo php artisan config:cache
