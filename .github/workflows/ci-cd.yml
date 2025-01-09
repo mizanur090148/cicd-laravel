@@ -6,97 +6,134 @@ on:
       - main
 
 jobs:
-  # Continuous Integration Job
+  # Continuous Integration (CI) Job
   ci:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code from GitHub repository
-      - name: Checkout code
+      # Step 1: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
-      # Step 2: Setup PHP environment
+      # Step 2: Set up PHP environment
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3" # Adjust this as needed
-          extensions: mbstring, bcmath, pdo, mysql
+          php-version: "8.3" # Use PHP version as per your application requirement
+          extensions: mbstring, bcmath, pdo, mysql # Ensure all necessary PHP extensions are included
+          tools: composer # Include Composer in the PHP setup
 
-      # Step 3: Install Composer dependencies
-      - name: Install dependencies
-        run: composer install --optimize-autoloader
+      # Step 3: Cache Composer dependencies to speed up the pipeline
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
-      # Step 4: Set up testing environment
-      - name: Set up testing environment
-        run: cp .env.example .env.testing && php artisan key:generate --show > temp-key && sed -i "s/^APP_KEY=.*/APP_KEY=$(cat temp-key)/" .env.testing && rm temp-key
+      # Step 4: Install Composer dependencies
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # Step 5: Run PHPUnit tests
+      # Step 5: Set up testing environment
+      - name: Set Up Testing Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+
+      # Step 6: Run PHPUnit tests
       - name: Run Tests
-        run: ./vendor/bin/phpunit --configuration phpunit.xml
+        run: ./vendor/bin/phpunit --configuration phpunit.xml --log-junit test-report.xml
 
-  # Continuous Deployment Job
+      # Step 7: Upload test results (Optional)
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: test-report.xml
+
+  # Continuous Deployment (CD) Job
   deploy:
     runs-on: ubuntu-latest
-    needs: [ci] # Ensures CI job passes before deployment
+    needs: [ci] # Ensure CI job passes before running the deployment
 
     env:
-      EC2_HOST: ${{ secrets.EC2_HOST }} # Replace with your EC2 instance IP
-      EC2_USER: ${{ secrets.EC2_USER }} # EC2 user for Ubuntu instances
-      EC2_KEY: ${{ secrets.EC2_KEY }} # GitHub Secret for your private key
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_KEY: ${{ secrets.EC2_KEY }}
 
     steps:
-      # Step 1: Checkout code from GitHub repository
-      - name: Checkout code
+      # Step 1: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
-      # Step 2: Decode and save SSH private key from GitHub Secrets
-      - name: Decode and Save SSH Key
+      # Step 2: Decode and save SSH private key securely
+      - name: Configure SSH Key
         run: |
-          echo "$EC2_KEY" > /tmp/test-cicd.pem
-          chmod 600 /tmp/test-cicd.pem
+          echo "$EC2_KEY" > /tmp/deploy-key.pem
+          chmod 600 /tmp/deploy-key.pem
 
-      # Step 3: Add EC2 Host to Known Hosts to avoid SSH warnings
+      # Step 3: Add EC2 host to known_hosts to avoid SSH prompt
       - name: Add EC2 Host to Known Hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
-      # Step 4: SSH to EC2 and run deployment commands
-      - name: SSH to EC2 and Deploy
+      # Step 4: SSH to EC2 and deploy Laravel application
+      - name: Deploy Laravel Application
         run: |
-          ssh -v -i /tmp/test-cicd.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST << 'EOF'
-            # Fix permissions for the project files
-            sudo chown -R www-data:www-data /var/www/laravel
-            sudo chmod -R 755 /var/www/laravel
+          ssh -i /tmp/deploy-key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
+            echo "Starting Laravel deployment..."
 
-            # Navigate to your Laravel project directory
-            cd /var/www/laravel
+            # Set variables
+            APP_DIR="/var/www/laravel"
+            DEPLOY_BRANCH="main"
 
-            # Pull the latest code from GitHub
-            sudo git pull origin main --no-ff
+            # Ensure proper ownership and permissions
+            echo "Adjusting permissions..."
+            sudo chown -R www-data:www-data $APP_DIR
+            sudo chmod -R 755 $APP_DIR
 
-            # Install Composer dependencies (production only)
-            sudo composer install --no-dev --optimize-autoloader --no-plugins
+            # Navigate to application directory
+            cd $APP_DIR
 
-            # Run database migrations if needed
-            # Uncomment the next line to run migrations
-            sudo php artisan migrate --force
+            # Pull latest code changes
+            echo "Pulling latest code from $DEPLOY_BRANCH branch..."
+            git reset --hard HEAD
+            git pull origin $DEPLOY_BRANCH
 
-            # Run db seed
-            sudo php artisan db:seed
+            # Install dependencies for production
+            echo "Installing production dependencies..."
+            composer install --no-dev --optimize-autoloader
 
-            # Clear and cache config
-            sudo php artisan config:cache
+            # Run database migrations
+            echo "Running database migrations..."
+            php artisan migrate --force
 
-            # Clear and cache routes
-            sudo php artisan route:cache
+            # Seed the database if necessary
+            echo "Seeding database..."
+            php artisan db:seed --force
 
-            # Clear and cache views
-            sudo php artisan view:cache
+            # Cache configurations
+            echo "Clearing and caching configurations..."
+            php artisan config:cache
 
-            # Restart the Nginx service to reflect the changes
+            # Cache routes
+            echo "Caching routes..."
+            php artisan route:cache
+
+            # Cache views
+            echo "Caching views..."
+            php artisan view:cache
+
+            # Restart services (e.g., Nginx, PHP-FPM)
+            echo "Restarting services..."
             sudo systemctl restart nginx
+            sudo systemctl restart php8.3-fpm
 
-            # Exit SSH session
+            echo "Laravel deployment completed!"
             exit
           EOF
