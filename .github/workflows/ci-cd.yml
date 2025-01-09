@@ -82,7 +82,7 @@ jobs:
             # Uncomment the next line to run migrations
             sudo php artisan migrate --force
 
-            # Uncomment the next line to run migrations
+            # Run db seed
             sudo php artisan db:seed
 
             # Clear and cache config
