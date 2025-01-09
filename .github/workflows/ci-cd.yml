@@ -102,24 +102,24 @@ jobs:
 
             # Pull latest code changes
             echo "Pulling latest code from $DEPLOY_BRANCH branch..."
-            git reset --hard HEAD
-            git pull origin $DEPLOY_BRANCH
+            sudo git reset --hard HEAD
+            sudo git pull origin $DEPLOY_BRANCH
 
             # Install dependencies for production
             echo "Installing production dependencies..."
-            composer install --no-dev --optimize-autoloader
+            sudo composer install --no-dev --optimize-autoloader
 
             # Run database migrations
             echo "Running database migrations..."
-            php artisan migrate --force
+            sudo php artisan migrate --force
 
             # Seed the database if necessary
             echo "Seeding database..."
-            php artisan db:seed --force
+            sudo php artisan db:seed --force
 
             # Cache configurations
             echo "Clearing and caching configurations..."
-            php artisan config:cache
+            sudo php artisan config:cache
 
             # Cache routes
             echo "Caching routes..."

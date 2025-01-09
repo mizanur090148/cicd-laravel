@@ -31,7 +31,7 @@
                     </header>
 
                     <main class="mt-6">
-                        <h4 class="text-center">Updated by Github Actions safdsdaf</h4>
+                        <h4 class="text-center">Updated Application</h4>
                         Hey This is auto updated application
                     </main>
 
